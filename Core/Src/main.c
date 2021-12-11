@@ -28,10 +28,13 @@
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 
-#define SIZE 1024
-#define MAX_VALUE 4095 //2^12
-#define HALF_VALUE 2047.5
-#define HALF_SIZE 512
+#define S_2000 2000
+#define S_1000 1000
+#define S_500   500
+#define S_250   250
+
+//#define MAX_VALUE 4095    //2^12
+//#define HALF_VALUE 2047.5 //(2^12)//2
 
 /* USER CODE END PTD */
 
@@ -104,17 +107,41 @@ int main(void)
 	uint8_t buttonPressed = 0;
 	uint8_t isPlaying = 1;
 
+	float sine2000[S_2000];
+	float sine1000[S_1000];
+	float sine500[S_500];
+	float sine250[S_250];
 
-	float sine[SIZE];
 
-
-	for (int i=0; i<SIZE; i++)
+	for (int i=0; i<S_2000; i++)
 	{
-		sine[i] = HALF_VALUE * arm_sin_f32((float)i * (float)(2*PI/SIZE));
+		sine2000[i] = S_2000 * arm_sin_f32((float)i * (float)(2*PI/S_2000));
 	}
 
-	float sin = 0;
-	uint16_t j_sine = 0;
+	for (int i=0; i<S_1000; i++)
+	{
+		sine1000[i] = S_1000 * arm_sin_f32((float)i * (float)(2*PI/S_1000));
+	}
+
+	for (int i=0; i<S_500; i++)
+	{
+		sine500[i] = S_500 * arm_sin_f32((float)i * (float)(2*PI/S_500));
+	}
+
+	for (int i=0; i<S_250; i++)
+	{
+		sine250[i] = S_250 * arm_sin_f32((float)i * (float)(2*PI/S_250));
+	}
+
+	float sin = 0; // Value to be played
+
+	// indexes
+	uint16_t i_2000 = 0;
+	uint16_t i_1000 = 0;
+	uint16_t i_500  = 0;
+	uint16_t i_250  = 0;
+
+	uint16_t sin_to_play = 2000;
 
 
   /* USER CODE END 2 */
@@ -134,8 +161,21 @@ int main(void)
 				HAL_GPIO_TogglePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin);
 				buttonPressed = 1;
 				if (isPlaying == 1){
+
 					HAL_DAC_Stop(&hdac1, DAC_CHANNEL_1);
 					HAL_DAC_Stop(&hdac1, DAC_CHANNEL_2);
+
+					// Change waves that will play
+					if (sin_to_play != S_250)
+					{
+						sin_to_play = sin_to_play / 2;
+					}
+					else
+					{
+						sin_to_play = S_2000;
+					}
+
+
 					isPlaying = 0;
 				}
 				else {
@@ -152,10 +192,36 @@ int main(void)
 
 		if (isPlaying == 1)
 		{
-			sin = sine[j_sine];
+			sin = 0;
+
+			if (sin_to_play < S_2000+1)
+			{
+				sin = sin + sine2000[i_2000];
+				i_2000 = (i_2000+1)%S_2000;
+
+			}
+			if (sin_to_play < S_1000+1)
+			{
+				sin = sin + sine1000[i_1000];
+				i_1000 = (i_1000+1)%S_1000;
+
+			}
+			if (sin_to_play < S_500+1)
+			{
+				sin = sin + sine500[i_500];
+				i_500 = (i_500+1)%S_500;
+
+			}
+			if (sin_to_play < S_250+1)
+			{
+				sin = sin + sine250[i_250];
+				i_250 = (i_250+1)%S_250;
+
+			}
+
 			HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_1, DAC_ALIGN_12B_R, sin);
 			HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_2, DAC_ALIGN_12B_R, sin);
-			j_sine = (j_sine+1)%SIZE;
+
 		}
 
 	}
@@ -181,14 +247,13 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_MSI;
-  RCC_OscInitStruct.MSIState = RCC_MSI_ON;
-  RCC_OscInitStruct.MSICalibrationValue = 0;
-  RCC_OscInitStruct.MSIClockRange = RCC_MSIRANGE_6;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_MSI;
-  RCC_OscInitStruct.PLL.PLLM = 1;
-  RCC_OscInitStruct.PLL.PLLN = 60;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+  RCC_OscInitStruct.PLL.PLLM = 2;
+  RCC_OscInitStruct.PLL.PLLN = 30;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = RCC_PLLQ_DIV2;
   RCC_OscInitStruct.PLL.PLLR = RCC_PLLR_DIV2;
@@ -210,14 +275,7 @@ void SystemClock_Config(void)
     Error_Handler();
   }
   PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_ADC;
-  PeriphClkInit.AdcClockSelection = RCC_ADCCLKSOURCE_PLLSAI1;
-  PeriphClkInit.PLLSAI1.PLLSAI1Source = RCC_PLLSOURCE_MSI;
-  PeriphClkInit.PLLSAI1.PLLSAI1M = 1;
-  PeriphClkInit.PLLSAI1.PLLSAI1N = 40;
-  PeriphClkInit.PLLSAI1.PLLSAI1P = RCC_PLLP_DIV2;
-  PeriphClkInit.PLLSAI1.PLLSAI1Q = RCC_PLLQ_DIV2;
-  PeriphClkInit.PLLSAI1.PLLSAI1R = RCC_PLLR_DIV2;
-  PeriphClkInit.PLLSAI1.PLLSAI1ClockOut = RCC_PLLSAI1_ADC1CLK;
+  PeriphClkInit.AdcClockSelection = RCC_ADCCLKSOURCE_SYSCLK;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
   {
     Error_Handler();
@@ -244,7 +302,7 @@ static void MX_ADC1_Init(void)
   /** Common config
   */
   hadc1.Instance = ADC1;
-  hadc1.Init.ClockPrescaler = ADC_CLOCK_ASYNC_DIV1;
+  hadc1.Init.ClockPrescaler = ADC_CLOCK_ASYNC_DIV2;
   hadc1.Init.Resolution = ADC_RESOLUTION_12B;
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
   hadc1.Init.ScanConvMode = ADC_SCAN_DISABLE;

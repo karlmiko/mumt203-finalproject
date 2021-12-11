@@ -1,6 +1,6 @@
-main.c:73:5:main	4120	static
-main.c:169:6:SystemClock_Config	248	static
-main.c:232:13:MX_ADC1_Init	32	static
-main.c:288:13:MX_DAC1_Init	48	static
-main.c:337:13:MX_GPIO_Init	40	static
-main.c:372:6:Error_Handler	4	static,ignoring_inline_asm
+main.c:76:5:main	15048	static
+main.c:235:6:SystemClock_Config	248	static
+main.c:290:13:MX_ADC1_Init	32	static
+main.c:346:13:MX_DAC1_Init	48	static
+main.c:395:13:MX_GPIO_Init	40	static
+main.c:430:6:Error_Handler	4	static,ignoring_inline_asm
